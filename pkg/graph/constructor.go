@@ -318,18 +318,20 @@ func (g *Graph) AddEventType(et eventingv1beta3.EventType) error {
 	}
 	dest := &duckv1.Destination{Ref: ref}
 
+	from := g.getOrCreateVertex(dest, et)
+
 	if et.Spec.Reference.Kind == "Subscription" || et.Spec.Reference.Kind == "Trigger" {
 		outEdge := g.GetPrimaryOutEdgeWithRef(et.Spec.Reference)
 		if outEdge == nil {
 			return fmt.Errorf("trigger/subscription must have a primary outward edge, but had none")
 		}
 
-		outEdge.To().AddEdge(outEdge.From(), dest, EventTypeTransform{EventType: &et}, false)
+		outEdge.To().AddEdge(from, dest, NoTransform{}, false)
+		from.AddEdge(from, dest, EventTypeTransform{EventType: &et}, false)
 
 		return nil
 	}
 
-	from := g.getOrCreateVertex(dest, et)
 	to := g.getOrCreateVertex(&duckv1.Destination{Ref: et.Spec.Reference}, nil)
 
 	from.AddEdge(to, dest, EventTypeTransform{EventType: &et}, false)
